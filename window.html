@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Inspector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-brand">
+        <span class="header-logo">🔍</span>
+        <h2>API Inspector</h2>
+      </div>
+      <div class="header-actions">
+        <select id="environmentSelector" class="environment-selector">
+          <option value="">No Environment</option>
+        </select>
+        <button id="manageEnvBtn" class="btn btn-icon" title="Manage Environments">⚙️</button>
+        <button id="savedRequestsBtn" class="btn btn-icon" title="Saved Requests">💾</button>
+        <button id="helpBtn" class="btn btn-icon" title="Help">❓</button>
+        <div class="export-wrap">
+          <button id="exportBtn" class="btn btn-secondary" title="Export to cURL / JMeter">⬇ Export</button>
+          <div id="exportMenu" class="export-menu" style="display: none;">
+            <button data-export="curl-one">📋 Copy selected as cURL</button>
+            <button data-export="curl-all">📋 Copy all as cURL (JMeter)</button>
+            <button data-export="jmx-one">📦 Export selected → .jmx</button>
+            <button data-export="jmx-all">📦 Export all → .jmx</button>
+          </div>
+        </div>
+        <button id="clearBtn" class="btn btn-secondary">Clear</button>
+        <button id="themeToggle" class="btn btn-icon" title="Toggle theme">🌙</button>
+      </div>
+    </div>
+
+    <!-- Target Bar (standalone window only) -->
+    <div class="target-bar">
+      <span class="target-label">Listening to:</span>
+      <select id="tabPicker" class="tab-picker">
+        <option value="">Select a tab…</option>
+      </select>
+      <button id="refreshTabsBtn" class="btn btn-secondary" title="Refresh tab list">↻</button>
+      <button id="reloadTabBtn" class="btn btn-secondary" title="Reload target tab to capture its page-load requests" style="display:none;">⟳ Reload tab</button>
+      <button id="detachBtn" class="btn btn-secondary" title="Stop listening" style="display:none;">Detach</button>
+      <span id="targetStatus" class="target-status">Not attached</span>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-more">
+        <button id="moreFiltersBtn" class="more-filters-btn" title="More filters">
+          <span class="chev">▾</span> More filters
+        </button>
+        <div id="moreFiltersPanel" class="more-filters-panel" style="display: none;">
+          <input type="text" id="filterInput" placeholder="Filter by URL or method…" class="filter-input">
+          <select id="methodFilter" class="method-filter">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" id="hideDataUrls"> Hide data: URLs
+          </label>
+        </div>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-chips" id="resourceFilters">
+        <button class="chip active" data-type="all">All</button>
+        <button class="chip" data-type="fetch-xhr">Fetch/XHR</button>
+        <button class="chip" data-type="doc">Doc</button>
+        <button class="chip" data-type="css">CSS</button>
+        <button class="chip" data-type="js">JS</button>
+        <button class="chip" data-type="font">Font</button>
+        <button class="chip" data-type="img">Img</button>
+        <button class="chip" data-type="media">Media</button>
+        <button class="chip" data-type="manifest">Manifest</button>
+        <button class="chip" data-type="socket">Socket</button>
+        <button class="chip" data-type="wasm">Wasm</button>
+        <button class="chip" data-type="other">Other</button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Left Panel - Request List -->
+      <div class="left-panel">
+        <div class="panel-header">
+          <h3>Captured Requests (<span id="requestCount">0</span>)</h3>
+        </div>
+        <div id="requestList" class="request-list">
+          <div class="empty-state">
+            <p>No requests captured yet.</p>
+            <p class="hint">Pick a tab above. Capture only starts after attaching — click <strong>⟳ Reload tab</strong> or trigger new API calls on that tab to see them here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle Panel - Request Editor -->
+      <div class="middle-panel">
+        <div class="panel-header">
+          <h3>Request Editor</h3>
+          <div class="editor-actions">
+            <button id="saveRequestBtn" class="btn btn-secondary" disabled title="Save this request">💾 Save</button>
+            <button id="compareBtn" class="btn btn-secondary" disabled title="Compare with another request">⚖️ Compare</button>
+            <button id="sendRequestBtn" class="btn btn-primary" disabled>
+              ▶️ Send Request
+            </button>
+          </div>
+        </div>
+        <div class="editor-content">
+          <div class="empty-state">
+            <p>Select a request from the list to view and edit it.</p>
+          </div>
+
+          <div id="editorView" class="editor-view" style="display: none;">
+            <div class="form-group">
+              <label>Method</label>
+              <select id="methodInput" class="input-field">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+                <option value="HEAD">HEAD</option>
+                <option value="OPTIONS">OPTIONS</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>URL</label>
+              <input type="text" id="urlInput" class="input-field" placeholder="https://api.example.com/endpoint">
+            </div>
+
+            <div class="form-group">
+              <label>
+                Headers
+                <span class="hint-text">(JSON format)</span>
+              </label>
+              <textarea id="headersInput" class="textarea-field" rows="6" placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer token"\n}'></textarea>
+            </div>
+
+            <div class="form-group" id="bodyGroup">
+              <label>
+                Request Body
+                <span class="hint-text">(JSON format for POST/PUT/PATCH)</span>
+              </label>
+              <textarea id="bodyInput" class="textarea-field" rows="8" placeholder='{\n  "key": "value"\n}'></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="includeCookies" checked>
+                Include cookies (credentials: "include")
+              </label>
+            </div>
+
+            <div class="action-buttons">
+              <button id="copyAsCurlBtn" class="btn btn-secondary">📋 Copy as cURL</button>
+              <button id="resetBtn" class="btn btn-secondary">↺ Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel - Response Viewer -->
+      <div class="right-panel">
+        <div class="panel-header">
+          <h3>Response</h3>
+          <div id="responseStatus" class="response-status"></div>
+        </div>
+        <div class="response-content">
+          <div class="empty-state">
+            <p>Response will appear here after sending a request.</p>
+          </div>
+
+          <div id="responseView" class="response-view" style="display: none;">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="response">Body</button>
+              <button class="tab-btn" data-tab="responseHeaders">Headers</button>
+              <button class="tab-btn" data-tab="cookies">Cookies</button>
+            </div>
+
+            <div class="tab-content">
+              <div id="responseTab" class="tab-pane active">
+                <pre id="responseBody" class="code-block"></pre>
+              </div>
+
+              <div id="responseHeadersTab" class="tab-pane">
+                <pre id="responseHeaders" class="code-block"></pre>
+              </div>
+
+              <div id="cookiesTab" class="tab-pane">
+                <pre id="cookiesView" class="code-block"></pre>
+              </div>
+            </div>
+
+            <div id="errorView" class="error-view" style="display: none;">
+              <h4>❌ Error</h4>
+              <pre id="errorMessage"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Environment Manager Modal -->
+  <div id="envModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚙️ Manage Environments</h3>
+        <button class="modal-close" id="closeEnvModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="env-list" id="envList"></div>
+        <div class="env-form">
+          <h4>Add New Environment</h4>
+          <input type="text" id="newEnvName" placeholder="Environment name (e.g., Development)" class="input-field">
+          <div id="envVarsList"></div>
+          <button id="addEnvVarBtn" class="btn btn-secondary">+ Add Variable</button>
+          <button id="saveEnvBtn" class="btn btn-primary">Save Environment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Requests Modal -->
+  <div id="savedModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 Saved Requests</h3>
+        <button class="modal-close" id="closeSavedModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="savedRequestsList" class="saved-requests-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Request Modal -->
+  <div id="saveModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 Save Request</h3>
+        <button class="modal-close" id="closeSaveModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>Request Name:</label>
+        <input type="text" id="saveRequestName" placeholder="e.g., Login API" class="input-field">
+        <label>Collection (optional):</label>
+        <input type="text" id="saveRequestCollection" placeholder="e.g., Authentication" class="input-field">
+        <label>Description (optional):</label>
+        <textarea id="saveRequestDesc" placeholder="Add notes about this request..." class="input-field" rows="3"></textarea>
+        <div class="modal-actions">
+          <button id="confirmSaveBtn" class="btn btn-primary">Save</button>
+          <button class="btn btn-secondary" id="cancelSaveBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Modal -->
+  <div id="compareModal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3>⚖️ Compare Responses</h3>
+        <button class="modal-close" id="closeCompareModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="compare-selectors">
+          <div>
+            <label>Select first request:</label>
+            <select id="compareSelect1" class="input-field"></select>
+          </div>
+          <div>
+            <label>Select second request:</label>
+            <select id="compareSelect2" class="input-field"></select>
+          </div>
+          <button id="runCompareBtn" class="btn btn-primary">Compare</button>
+        </div>
+        <div id="compareResult" class="compare-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>❓ How to Use</h3>
+        <button class="modal-close" id="closeHelpModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <h4>🎯 Choose a target tab</h4>
+        <ol>
+          <li>Pick a tab from the <strong>Listening to</strong> dropdown at the top</li>
+          <li>The window attaches to that tab and captures its requests</li>
+          <li>Trigger API calls on that tab — they appear on the left</li>
+          <li>Click <strong>Detach</strong> to stop, or pick another tab to switch</li>
+        </ol>
+
+        <h4>▶️ Send Request</h4>
+        <ol>
+          <li>Select or edit a request, then click <strong>Send Request</strong></li>
+          <li>The request runs inside the attached tab (with its cookies)</li>
+        </ol>
+
+        <h4>⚙️ Environment Variables</h4>
+        <ol>
+          <li>Click <strong>⚙️</strong> to manage environments</li>
+          <li>Use variables in requests: <code>{{baseUrl}}/users</code></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script src="core.js"></script>
+  <script src="window.js"></script>
+</body>
+</html>

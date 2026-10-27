@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Generator - API Inspector</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .icon-preview {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+            align-items: center;
+        }
+        .icon-box {
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .icon-label {
+            margin-top: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        button.download-all {
+            background: #4caf50;
+        }
+        button.download-all:hover {
+            background: #388e3c;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 30px;
+            border-left: 4px solid #1976d2;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            color: #333;
+        }
+        .success {
+            background: #4caf50;
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API Inspector Icon Generator</h1>
+        <p class="subtitle">Generate PNG icons for your Chrome extension</p>
+
+        <div class="icon-preview">
+            <div class="icon-box">
+                <canvas id="icon16" width="16" height="16"></canvas>
+                <div class="icon-label">16×16</div>
+            </div>
+            <div class="icon-box">
+                <canvas id="icon48" width="48" height="48"></canvas>
+                <div class="icon-label">48×48</div>
+            </div>
+            <div class="icon-box">
+                <canvas id="icon128" width="128" height="128"></canvas>
+                <div class="icon-label">128×128</div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button onclick="downloadIcon(16)">Download icon16.png</button>
+            <button onclick="downloadIcon(48)">Download icon48.png</button>
+            <button onclick="downloadIcon(128)">Download icon128.png</button>
+        </div>
+        <div class="buttons">
+            <button class="download-all" onclick="downloadAll()">📥 Download All Icons</button>
+        </div>
+
+        <div id="success" class="success">
+            ✅ Icons downloaded! Move them to the extension/icons/ folder.
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Click "Download All Icons" button above</li>
+                <li>Three PNG files will be downloaded to your Downloads folder</li>
+                <li>Move all three files to: <code>extension/icons/</code></li>
+                <li>Files should be named: <code>icon16.png</code>, <code>icon48.png</code>, <code>icon128.png</code></li>
+                <li>Load the extension in Chrome: <code>chrome://extensions/</code> → "Load unpacked"</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Generate icons when page loads
+        window.addEventListener('load', () => {
+            generateIcon(16);
+            generateIcon(48);
+            generateIcon(128);
+        });
+
+        function generateIcon(size) {
+            const canvas = document.getElementById(`icon${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient (blue)
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#1976d2');
+            gradient.addColorStop(1, '#0d47a1');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw API symbol
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (size >= 48) {
+                // For larger icons, draw "API" text
+                ctx.fillText('API', size / 2, size / 2);
+            } else {
+                // For 16px, draw a simple dot pattern
+                const dotSize = size / 8;
+                ctx.beginPath();
+                ctx.arc(size / 2, size / 3, dotSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(size / 3, size * 2 / 3, dotSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(size * 2 / 3, size * 2 / 3, dotSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Add border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = Math.max(1, size / 32);
+            ctx.strokeRect(0, 0, size, size);
+        }
+
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`icon${size}`);
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showSuccess();
+            });
+        }
+
+        function downloadAll() {
+            downloadIcon(16);
+            setTimeout(() => downloadIcon(48), 500);
+            setTimeout(() => downloadIcon(128), 1000);
+        }
+
+        function showSuccess() {
+            const success = document.getElementById('success');
+            success.style.display = 'block';
+            setTimeout(() => {
+                success.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
